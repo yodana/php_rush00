@@ -39,7 +39,7 @@ class DefaultController extends Controller
         $qb = $entityManager->createQueryBuilder();
         $qb
         ->delete()
-        ->from(Moviemon::class, 'a')
+        ->from('GameBundle:Moviemon', 'a')
         ->getQuery()
         ->execute();
         while($i < 10){
@@ -105,19 +105,44 @@ class DefaultController extends Controller
      * @Route("/save/")
      */
     public function save(){
+        $array_m = [];
         $entityManager = $this->getDoctrine()->getManager();
         $qb = $entityManager->createQueryBuilder();
         $movie = $qb
-        ->select('*')
-        ->from(Moviemon::class, 'a')
+        ->select('u')
+        ->from('GameBundle:Moviemon', 'u')
+        ->getQuery()
+        ->getResult();
+        foreach($movie as $m){
+            array_push($array_m, [
+                'title' => $m->getTitle(),
+                'rating' => $m->getRating(),
+                'year' => $m->getYear(),
+                'plot' => $m->getPlot(),
+                'genre' => $m->getGenre(),
+                'actors' => $m->getActors(),
+            ]);
+        }
+        $array_u = [];
+        $user = $qb
+        ->select('a')
+        ->from(User::class, 'a')
         ->getQuery()
         ->execute();
-        var_dump($movie);
-        //$json = json_encode($array);
-        //$bytes = file_put_contents("myfile.json", $json); 
-        return $this->render('GameBundle::index.html.twig', [
+        foreach($user as $u){
+            array_push($array_u, [
+                'username' => $u->getUsername(),
+            ]);
+            $name = $u->getUsername();
+        }
+        $array = [
+            'movies' => $array_m,
+            'user' => $array_u,
+        ];
+        $json = json_encode($array);
+        file_put_contents(__DIR__ . "/" . $name . ".json", $json);
+        return $this->render('GameBundle:Default:index.html.twig', [
             "message" => ""
         ]);
     }
-
 }
