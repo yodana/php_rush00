@@ -17,12 +17,14 @@ class DefaultController extends Controller
 {
     const apikey = '3be1283c';
     
-    public function newUser($name, $health, $power){
+    public function newUser($name, $health, $power, $x, $y){
         $user = new User();
         $entityManager = $this->getDoctrine()->getManager();
         $user->setUsername($name);
         $user->setPower($power);
         $user->setHealth($health);
+        $user->setX($x);
+        $user->setY($y);
         try{
             $entityManager->persist($user);
             $entityManager->flush();
@@ -62,13 +64,25 @@ class DefaultController extends Controller
      */
     public function indexAction()
     {
+        $cancel = false;
+        $entityManager = $this->getDoctrine()->getManager();
+        $qb = $entityManager->createQueryBuilder();
+        $result = $qb
+        ->select('u')
+        ->from('GameBundle:User', 'u')
+        ->getQuery()
+        ->execute();
+        if ($result){
+            $cancel = true;
+        }
         return $this->render('GameBundle:Default:index.html.twig', [
-            "message" => ""
+            "message" => "",
+            "cancel" => $cancel
         ]);
     }
 
      /**
-     * @Route("/game/")
+     * @Route("/new/")
      */
     public function getNewGame(Request $request)
     {
@@ -103,15 +117,17 @@ class DefaultController extends Controller
         ->getForm();
         $form->handleRequest($request);
         if($form->isValid() && $form->isSubmitted()){
-            $message = $this->newUser($form["username"]->getData(), 10, 1);
+            $message = $this->newUser($form["username"]->getData(), 10, 1, 2, 2);
             return $this->render('GameBundle::game.html.twig', [
-                "message" => $message
+                "message" => $message,
+                "test" => ""
             ]);
         }
         return $this->render('GameBundle::new.html.twig', [
             "form" => $form->createView()
         ]);
     }
+
 
      /**
      * @Route("/save/")
@@ -201,8 +217,7 @@ class DefaultController extends Controller
             $array = json_decode($json, true);
             $array_m = $array["movies"];
             $array_u = $array["user"];
-            var_dump($array_u);
-            $message = $this->newUser($array_u["username"], $array_u["health"], $array_u["power"]);
+            $message = $this->newUser($array_u[0]["username"], $array_u[0]["health"], $array_u[0]["power"]);
             foreach($array_m as $movie)
                 $this->newMovie($movie["title"], $movie["rating"], $movie["year"], $movie["plot"],
                 $movie["genre"],$movie["actors"]);
@@ -210,6 +225,34 @@ class DefaultController extends Controller
         return $this->render('GameBundle::load.html.twig', [
             "message" => "",
             "files" => ""
+        ]);
+    }
+    
+    /**
+     * @Route("/game/")
+     */
+    public function game(){
+        $entityManager = $this->getDoctrine()->getManager();
+        $qb = $entityManager->createQueryBuilder();
+        $array_u = [];
+        $positon = [];
+        $user = $qb
+        ->select('a')
+        ->from(User::class, 'a')
+        ->getQuery()
+        ->execute();
+        $string = '<td style="border: 1px solid black;" width="100px" height="100px">JOUEUR</td>';
+        foreach($user as $u){
+            array_push($array_u, [
+                'username' => $u->getUsername(),
+                'health' => $u->getHealth(),
+                'power' => $u->getPower(),
+            ]);
+            $name = $u->getUsername();
+        }
+        return $this->render('GameBundle::game.html.twig', [
+            "message" => "",
+            "test" => $string
         ]);
     }
 }

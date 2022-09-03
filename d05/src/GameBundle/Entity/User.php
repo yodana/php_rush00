@@ -42,6 +42,20 @@ class User
      */
     private $power;
 
+     /**
+     * @var int
+     *
+     * @ORM\Column(name="x", type="integer")
+     */
+    private $x;
+
+     /**
+     * @var int
+     *
+     * @ORM\Column(name="y", type="integer")
+     */
+    private $y;
+
 
     /**
      * Get id.
@@ -89,6 +103,55 @@ class User
         $this->health = $health;
 
         return $this;
+    }
+
+    /**
+     * Set position x.
+     *
+     * @param int $x
+     *
+     * @return User
+     */
+    public function setX($x)
+    {
+        $this->x = $x;
+
+        return $this;
+    }
+
+
+    /**
+     * Set position y.
+     *
+     * @param int $y
+     *
+     * @return User
+     */
+    public function setY($y)
+    {
+        $this->y = $y;
+
+        return $this;
+    }
+
+      /**
+     * Get x.
+     *
+     * @return int
+     */
+    public function getX()
+    {
+        return $this->x;
+    }
+
+      /**
+     * Get y.
+     *
+     * @return int
+     */
+    public function getY()
+    {
+        return $this->y;
     }
 
     /**

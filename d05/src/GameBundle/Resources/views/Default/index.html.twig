@@ -4,8 +4,11 @@
     </head>
     <body>
         {{message}}
-        <a href="/game/"><button>New</button></a>
+        <a href="/new/"><button>New</button></a>
         <a href="/save/"><button>Save</button></a>
         <a href="/load/"><button>Load</button></a>
+        {% if cancel == true %}
+            <a href="/game/"><button>Cancel</button></a>
+        {% endif %}
     </body>
 </html>
