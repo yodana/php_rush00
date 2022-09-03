@@ -145,4 +145,21 @@ class DefaultController extends Controller
             "message" => ""
         ]);
     }
+
+    /**
+     * @Route("/load/{name}")
+     */
+    public function load(){
+        
+        $scandir = scandir(__DIR__);
+        $files = [];
+        foreach($scandir as $file){
+            if (strpos($file, ".json") != FALSE)
+                array_push($files, $file);
+        }
+        return $this->render('GameBundle::load.html.twig', [
+            "message" => "",
+            "files" => $files
+        ]);
+    }
 }
