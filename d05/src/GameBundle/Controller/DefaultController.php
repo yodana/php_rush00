@@ -16,7 +16,47 @@ use Symfony\Component\HttpFoundation\Request;
 class DefaultController extends Controller
 {
     const apikey = '3be1283c';
-
+    
+    public function newUser($name, $health, $power){
+        $user = new User();
+        $entityManager = $this->getDoctrine()->getManager();
+        $user->setUsername($name);
+        $user->setPower($power);
+        $user->setHealth($health);
+        try{
+            $entityManager->persist($user);
+            $entityManager->flush();
+            $message = "User create by success";
+            }
+        catch(\Exception $e){
+            $message = $e->getMessage();
+        }
+        return $message;
+    }
+    public function newMovie($title, $rating, $year, $plot, $genre, $actors){
+        $entityManager = $this->getDoctrine()->getManager();
+        $movie = new Moviemon();
+        $movie->setTitle($title);
+        $movie->setRating($rating);
+        $movie->setYear($year);
+        $movie->setPlot($plot);
+        $movie->setGenre($genre);
+        $movie->setActors($actors);
+        $movie->setHealth(10);
+        if ($rating == "N/A" || $rating < 5)
+            $movie->setPower(1);
+        else if ($rating >= 5 && $rating <= 7)
+            $movie->setPower(10);
+        else
+            $movie->setPower(100);
+        try{
+            $entityManager->persist($movie);
+            $entityManager->flush();
+            }
+        catch(\Exception $e){
+            echo $e->getMessage();
+        }
+    }
     /**
      * @Route("/options/")
      */
@@ -42,33 +82,19 @@ class DefaultController extends Controller
         ->from('GameBundle:Moviemon', 'a')
         ->getQuery()
         ->execute();
+        $qb = $entityManager->createQueryBuilder();
+        $qb
+        ->delete()
+        ->from('GameBundle:User', 'u')
+        ->getQuery()
+        ->execute();
         while($i < 10){
             $response = $client->request(
                     'GET',
                     'https://www.omdbapi.com/?i=' . $id_movies[$i] . '&apikey=' . $this::apikey
                 )->toArray();
-            $movie = new Moviemon();
-            $movie->setTitle($response["Title"]);
-            $movie->setRating($response["imdbRating"]);
-            $movie->setYear($response["Year"]);
-            $movie->setPlot($response["Plot"]);
-            $movie->setGenre($response["Genre"]);
-            $movie->setActors($response["Actors"]);
-            $movie->setHealth(10);
-            if ($response["imdbRating"] == "N/A" || $response["imdbRating"] < 5)
-                $movie->setPower(1);
-            else if ($response["imdbRating"] >= 5 && $response["imdbRating"] <= 7)
-                $movie->setPower(10);
-            else
-                $movie->setPower(100);
-            try{
-                $entityManager->persist($movie);
-                $entityManager->flush();
-                }
-            catch(\Exception $e){
-                echo $e->getMessage();
-                $i--;
-            }
+            $this->newMovie($response["Title"],$response["imdbRating"],
+            $response["Year"],$response["Plot"], $response["Genre"], $response["Actors"]);
             $i++;
         }
         $form = $this->createFormBuilder()
@@ -77,21 +103,7 @@ class DefaultController extends Controller
         ->getForm();
         $form->handleRequest($request);
         if($form->isValid() && $form->isSubmitted()){
-            $user = new User();
-            $user->setUsername($form["username"]->getData());
-            $user->setPower(1);
-            $user->setHealth(10);
-            try{
-                $entityManager->persist($user);
-                $entityManager->flush();
-                $message = "User create by success";
-                }
-            catch(\Exception $e){
-                $message = $e->getMessage();
-                return $this->render('GameBundle:Default:index.html.twig', [
-                    "message" => $message
-                ]);
-            }
+            $message = $this->newUser($form["username"]->getData(), 10, 1);
             return $this->render('GameBundle::game.html.twig', [
                 "message" => $message
             ]);
@@ -132,6 +144,8 @@ class DefaultController extends Controller
         foreach($user as $u){
             array_push($array_u, [
                 'username' => $u->getUsername(),
+                'health' => $u->getHealth(),
+                'power' => $u->getPower(),
             ]);
             $name = $u->getUsername();
         }
@@ -140,17 +154,19 @@ class DefaultController extends Controller
             'user' => $array_u,
         ];
         $json = json_encode($array);
-        file_put_contents(__DIR__ . "/" . $name . ".json", $json);
+        $file = fopen(__DIR__ . '/' . $name . ".json", "c");
+        fclose($file);
+        file_put_contents(__DIR__ . '/' . $name . ".json", $json);
         return $this->render('GameBundle:Default:index.html.twig', [
             "message" => ""
         ]);
     }
 
     /**
-     * @Route("/load/{name}")
+     * @Route("/load/")
      */
     public function load(){
-        
+
         $scandir = scandir(__DIR__);
         $files = [];
         foreach($scandir as $file){
@@ -160,6 +176,40 @@ class DefaultController extends Controller
         return $this->render('GameBundle::load.html.twig', [
             "message" => "",
             "files" => $files
+        ]);
+    }
+
+      /**
+     * @Route("/load/{name}")
+     */
+    public function loadingPlayer($name){
+        $entityManager = $this->getDoctrine()->getManager();
+        $qb = $entityManager->createQueryBuilder();
+        $qb
+        ->delete()
+        ->from('GameBundle:Moviemon', 'a')
+        ->getQuery()
+        ->execute();
+        $qb = $entityManager->createQueryBuilder();
+        $qb
+        ->delete()
+        ->from('GameBundle:User', 'u')
+        ->getQuery()
+        ->execute();
+        if ($name){
+            $json = file_get_contents(__DIR__ . "/" . $name);
+            $array = json_decode($json, true);
+            $array_m = $array["movies"];
+            $array_u = $array["user"];
+            var_dump($array_u);
+            $message = $this->newUser($array_u["username"], $array_u["health"], $array_u["power"]);
+            foreach($array_m as $movie)
+                $this->newMovie($movie["title"], $movie["rating"], $movie["year"], $movie["plot"],
+                $movie["genre"],$movie["actors"]);
+        }
+        return $this->render('GameBundle::load.html.twig', [
+            "message" => "",
+            "files" => ""
         ]);
     }
 }
