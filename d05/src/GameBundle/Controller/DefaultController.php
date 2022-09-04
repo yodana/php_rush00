@@ -310,6 +310,12 @@ class DefaultController extends Controller
         ->from(Moviemon::class, 'u')
         ->getQuery()
         ->execute();
+        $qb = $entityManager->createQueryBuilder();
+        $users = $qb
+        ->select('a')
+        ->from(User::class, 'a')
+        ->getQuery()
+        ->execute();
         $i = 0;
         foreach($moviemon as $m){
             if ($i == $rand){
@@ -321,10 +327,18 @@ class DefaultController extends Controller
             }
             $i++;
         }
-        $poster = '<img src="/posters/' . str_replace(" ", "", $movie->getTitle()) . '.png" width="400px" height="800px">';
+        foreach($users as $user)
+            $array_u = ['username' => $user->getUsername(),
+            'health' => $user->getHealth(),
+            'power' => $user->getPower(),
+            ];
+        $poster = '<img src="/posters/' . str_replace(" ", "", $movie->getTitle()) . '.png" width="400px" height="600px">';
+        $avatar = '<img src="/eddy.png" width="400px" height="400px">';
         return $this->render('GameBundle::fight.html.twig', [
             "poster" => $poster,
-            "movie" => $array_m
+            "movie" => $array_m,
+            "avatar" => $avatar,
+            "user" => $array_u
         ]);
     }
 }
