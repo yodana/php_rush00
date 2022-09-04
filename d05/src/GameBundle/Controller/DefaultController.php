@@ -242,6 +242,9 @@ class DefaultController extends Controller
         ->getQuery()
         ->execute();
         $string = '<td style="border: 1px solid black;" width="100px" height="100px">JOUEUR</td>';
+        $x = 0;
+        $y = 0;
+        $map = [];
         foreach($user as $u){
             array_push($array_u, [
                 'username' => $u->getUsername(),
@@ -249,10 +252,22 @@ class DefaultController extends Controller
                 'power' => $u->getPower(),
             ]);
             $name = $u->getUsername();
+            while($x <= 4){
+                while($y <= 4){
+                    if ($y == $u->getY() && $x == $u->getX())
+                        $map[$x][$y] = 1;
+                    else
+                        $map[$x][$y] = "";
+                    $y++;
+                }
+                $y = 0;
+                $x++;
+            }
         }
+        var_dump($map);
         return $this->render('GameBundle::game.html.twig', [
             "message" => "",
-            "test" => $string
+            "map" => $map
         ]);
     }
 }
