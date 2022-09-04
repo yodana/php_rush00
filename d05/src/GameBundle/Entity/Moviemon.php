@@ -120,7 +120,7 @@ class Moviemon
      */
     public function getHealth()
     {
-        return $this->title;
+        return $this->health;
     }
     
     /**

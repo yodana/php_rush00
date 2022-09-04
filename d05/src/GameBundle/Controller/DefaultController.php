@@ -17,6 +17,24 @@ class DefaultController extends Controller
 {
     const apikey = '3be1283c';
     
+    public function getMap($u_x, $u_y){
+        $map = [];
+        $x = 0;
+        $y = 0;
+        while($x <= 4){
+            while($y <= 4){
+                if ($y == $u_y && $x == $u_x)
+                    $map[$x][$y] = '<img src="/eddy.png" width="100px" height="100px">';
+                else
+                    $map[$x][$y] = "";
+                $y++;
+            }
+            $y = 0;
+            $x++;
+        }
+        return $map;
+    }
+
     public function newUser($name, $health, $power, $x, $y){
         $user = new User();
         $entityManager = $this->getDoctrine()->getManager();
@@ -120,7 +138,8 @@ class DefaultController extends Controller
             $message = $this->newUser($form["username"]->getData(), 10, 1, 2, 2);
             return $this->render('GameBundle::game.html.twig', [
                 "message" => $message,
-                "test" => ""
+                "fight" => false,
+                "map" => $this->getMap(2, 2)
             ]);
         }
         return $this->render('GameBundle::new.html.twig', [
@@ -229,9 +248,9 @@ class DefaultController extends Controller
     }
     
     /**
-     * @Route("/game/")
+     * @Route("/game/{move}")
      */
-    public function game(){
+    public function game($move){
         $entityManager = $this->getDoctrine()->getManager();
         $qb = $entityManager->createQueryBuilder();
         $array_u = [];
@@ -241,33 +260,71 @@ class DefaultController extends Controller
         ->from(User::class, 'a')
         ->getQuery()
         ->execute();
-        $string = '<td style="border: 1px solid black;" width="100px" height="100px">JOUEUR</td>';
         $x = 0;
         $y = 0;
         $map = [];
         foreach($user as $u){
+            var_dump((5 + (4 % 5)) % 5);
             array_push($array_u, [
                 'username' => $u->getUsername(),
                 'health' => $u->getHealth(),
                 'power' => $u->getPower(),
             ]);
             $name = $u->getUsername();
-            while($x <= 4){
-                while($y <= 4){
-                    if ($y == $u->getY() && $x == $u->getX())
-                        $map[$x][$y] = 1;
-                    else
-                        $map[$x][$y] = "";
-                    $y++;
-                }
-                $y = 0;
-                $x++;
+            if ($move == "left"){
+                $u->setY((5 + (($u->getY() - 1) % 5)) % 5);
+            }
+            else if ($move == "right"){
+                $u->setY((5 + (($u->getY() + 1) % 5)) % 5);
+            }
+            else if ($move == "down"){
+                $u->setX((5 + (($u->getX() + 1) % 5)) % 5);
+            }
+            else if ($move == "up"){
+                $u->setX((5 + (($u->getX() - 1) % 5)) % 5);
+            }
+            try{
+                $entityManager->persist($u);
+                $entityManager->flush();
+            }
+            catch(\Exception $e){
+                echo $e->getMessage();
             }
         }
-        var_dump($map);
         return $this->render('GameBundle::game.html.twig', [
             "message" => "",
-            "map" => $map
+            "fight" => true,
+            "map" => $this->getMap($u->getX(), $u->getY())
+        ]);
+    }
+       
+    /**
+     * @Route("/fight/")
+     */
+    public function fight(){
+        $entityManager = $this->getDoctrine()->getManager();
+        $qb = $entityManager->createQueryBuilder();
+        $rand = rand(0,9);
+        $moviemon = $qb
+        ->select('u')
+        ->from(Moviemon::class, 'u')
+        ->getQuery()
+        ->execute();
+        $i = 0;
+        foreach($moviemon as $m){
+            if ($i == $rand){
+                $movie = $m;
+                $array_m = ['title' => $m->getTitle(),
+                'health' => $m->getHealth(),
+                'power' => $m->getPower(),
+                ];
+            }
+            $i++;
+        }
+        $poster = '<img src="/posters/' . str_replace(" ", "", $movie->getTitle()) . '.png" width="400px" height="800px">';
+        return $this->render('GameBundle::fight.html.twig', [
+            "poster" => $poster,
+            "movie" => $array_m
         ]);
     }
 }
