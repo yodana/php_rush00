@@ -248,7 +248,7 @@ class DefaultController extends Controller
     }
     
     /**
-     * @Route("/game/{move}")
+     * @Route("/game/{move}/")
      */
     public function game($move){
         $entityManager = $this->getDoctrine()->getManager();
@@ -264,13 +264,13 @@ class DefaultController extends Controller
         $y = 0;
         $map = [];
         foreach($user as $u){
-            var_dump((5 + (4 % 5)) % 5);
             array_push($array_u, [
                 'username' => $u->getUsername(),
                 'health' => $u->getHealth(),
                 'power' => $u->getPower(),
             ]);
             $name = $u->getUsername();
+            $u->getHealth(10);
             if ($move == "left"){
                 $u->setY((5 + (($u->getY() - 1) % 5)) % 5);
             }
@@ -336,14 +336,15 @@ class DefaultController extends Controller
             'power' => $user->getPower(),
             ];
         if ($event == "random"){
-            // Si le meme power alors 50% de chance de reussir
-            if($movie["power"] == $user->getPower()){
-                $rand = rand($movie["power"], $user->getPower() * 2);
-                if ($rand % 2)
-                    echo "USER WIN";
-                else
-                    echo "MONSTER ATTACK";   
-            }
+            $rand = rand(1, 100);
+            $mod = $movie["power"] / $user->getPower();
+            var_dump($mod);
+            if($mod < 1)
+                $mod = 1;
+            if (($rand % $mod) == 0)
+                echo "USER WIN";
+            else
+                echo "MONSTER ATTACK";
         }
         $poster = '<img src="/posters/' . str_replace(" ", "", $movie["title"]) . '.png" width="400px" height="600px">';
         $avatar = '<img src="/eddy.png" width="400px" height="400px">';
