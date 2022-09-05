@@ -63,6 +63,7 @@ class DefaultController extends Controller
         $movie->setGenre($genre);
         $movie->setActors($actors);
         $movie->setHealth(10);
+        $movie->setCaptured(false);
         if ($rating == "N/A" || $rating < 5)
             $movie->setPower(1);
         else if ($rating >= 5 && $rating <= 7)
@@ -176,24 +177,32 @@ class DefaultController extends Controller
         ->from(User::class, 'a')
         ->getQuery()
         ->execute();
+        $name = "";
         foreach($user as $u){
             array_push($array_u, [
                 'username' => $u->getUsername(),
                 'health' => $u->getHealth(),
                 'power' => $u->getPower(),
+                'x' => $u->getX(),
+                'y' => $u->getY()
             ]);
             $name = $u->getUsername();
         }
-        $array = [
-            'movies' => $array_m,
-            'user' => $array_u,
-        ];
-        $json = json_encode($array);
-        $file = fopen(__DIR__ . '/' . $name . ".json", "c");
-        fclose($file);
-        file_put_contents(__DIR__ . '/' . $name . ".json", $json);
+        if ($name != ""){
+            $array = [
+                'movies' => $array_m,
+                'user' => $array_u,
+            ];
+            $json = json_encode($array);
+            file_put_contents($name . ".json", $json);
+            return $this->render('GameBundle:Default:index.html.twig', [
+                "message" => "",
+                "cancel" => false
+            ]);
+        }
         return $this->render('GameBundle:Default:index.html.twig', [
-            "message" => ""
+            "message" => "Sauvegarde impossible pas de joueur!",
+            "cancel" => false
         ]);
     }
 
@@ -202,7 +211,7 @@ class DefaultController extends Controller
      */
     public function load(){
 
-        $scandir = scandir(__DIR__);
+        $scandir = scandir('.');
         $files = [];
         foreach($scandir as $file){
             if (strpos($file, ".json") != FALSE)
@@ -210,7 +219,8 @@ class DefaultController extends Controller
         }
         return $this->render('GameBundle::load.html.twig', [
             "message" => "",
-            "files" => $files
+            "files" => $files,
+            "map" => false
         ]);
     }
 
@@ -232,18 +242,21 @@ class DefaultController extends Controller
         ->getQuery()
         ->execute();
         if ($name){
-            $json = file_get_contents(__DIR__ . "/" . $name);
+            $json = file_get_contents($name);
             $array = json_decode($json, true);
             $array_m = $array["movies"];
             $array_u = $array["user"];
-            $message = $this->newUser($array_u[0]["username"], $array_u[0]["health"], $array_u[0]["power"], 2, 2);
+            var_dump($array_u[0]["x"],$array_u[0]["y"]);
+            $message = $this->newUser($array_u[0]["username"], $array_u[0]["health"], $array_u[0]["power"], $array_u[0]["x"], $array_u[0]["y"]);
             foreach($array_m as $movie)
                 $this->newMovie($movie["title"], $movie["rating"], $movie["year"], $movie["plot"],
                 $movie["genre"],$movie["actors"]);
         }
         return $this->render('GameBundle::load.html.twig', [
-            "message" => "",
-            "files" => ""
+            "message" => "User loaded",
+            "files" => "",
+            "map" => true
+
         ]);
     }
     
@@ -272,25 +285,32 @@ class DefaultController extends Controller
             $name = $u->getUsername();
             $u->getHealth(10);
             if ($move == "left"){
+                var_dump("LEFT");
                 $u->setY((5 + (($u->getY() - 1) % 5)) % 5);
             }
             else if ($move == "right"){
+                var_dump("RIGHT");
                 $u->setY((5 + (($u->getY() + 1) % 5)) % 5);
             }
             else if ($move == "down"){
+                var_dump("DOWN");
                 $u->setX((5 + (($u->getX() + 1) % 5)) % 5);
             }
             else if ($move == "up"){
+                var_dump("UP");
                 $u->setX((5 + (($u->getX() - 1) % 5)) % 5);
             }
             try{
-                $entityManager->persist($u);
-                $entityManager->flush();
+                if ($move != "nomove"){
+                    $entityManager->persist($u);
+                    $entityManager->flush();
+                }
             }
             catch(\Exception $e){
                 echo $e->getMessage();
             }
         }
+        var_dump($u->getX(), $u->getY());
         return $this->render('GameBundle::game.html.twig', [
             "message" => "",
             "fight" => true,
@@ -302,6 +322,7 @@ class DefaultController extends Controller
      * @Route("/fight/{event}/")
      */
     public function fight($event){
+        $message = "";
         $session = $this->get('session');
         $entityManager = $this->getDoctrine()->getManager();
         $qb = $entityManager->createQueryBuilder();
@@ -321,7 +342,9 @@ class DefaultController extends Controller
         if ($event == "new"){
             foreach($moviemon as $m){
                 if ($i == $rand){
-                    $session->set('movie', ['title' => $m->getTitle(),
+                    $session->set('movie', [
+                    'id' => $m->getId(),
+                    'title' => $m->getTitle(),
                     'health' => $m->getHealth(),
                     'power' => $m->getPower(),
                     ]);
@@ -341,10 +364,48 @@ class DefaultController extends Controller
             var_dump($mod);
             if($mod < 1)
                 $mod = 1;
-            if (($rand % $mod) == 0)
-                echo "USER WIN";
-            else
-                echo "MONSTER ATTACK";
+            if (($rand % $mod) == 0){
+                $message = "USER ATTACK AND TAKE ONE HEALTH TO THE MOVIE";
+                $session->set('movie', [
+                    'id' => $session->get('movie')["id"],
+                    'title' => $session->get('movie')["title"],
+                    'health' => $session->get('movie')["health"] - 1,
+                    'power' => $session->get('movie')["power"],
+                    ]);
+                if($session->get('movie')["health"] <= 0){
+                    $m = $entityManager->getRepository(Moviemon::class)->find($session->get('movie')["id"]);
+                    $m->setHealth($session->get('movie')["health"]);
+                    $m->setCaptured(true);
+                    $entityManager->persist($m);
+                    $entityManager->flush();
+                    $message = "CONGRATS YOU CAPTURED THIS MOVIE";
+                }
+            }
+            else{
+                var_dump($user->getHealth());
+                $message = "MONSTER ATTACK YOU! YOU LOSE 1 HP!";
+                if ($user->getHealth() - 1 <= 0){
+                    $qb = $entityManager->createQueryBuilder();
+                    $qb
+                    ->delete()
+                    ->from('GameBundle:Moviemon', 'a')
+                    ->getQuery()
+                    ->execute();
+                    $qb = $entityManager->createQueryBuilder();
+                    $qb
+                    ->delete()
+                    ->from('GameBundle:User', 'u')
+                    ->getQuery()
+                    ->execute();
+                    return $this->render('GameBundle:Default:index.html.twig', [
+                        "message" => "YOU LOSE YOU USER HAS BEEN DELETED! Try again.",
+                        "cancel" => false
+                    ]);
+                }
+                $user->setHealth($user->getHealth() - 1);
+                $entityManager->persist($user);
+                $entityManager->flush();
+            }
         }
         $poster = '<img src="/posters/' . str_replace(" ", "", $movie["title"]) . '.png" width="400px" height="600px">';
         $avatar = '<img src="/eddy.png" width="400px" height="400px">';
@@ -352,7 +413,8 @@ class DefaultController extends Controller
             "poster" => $poster,
             "movie" => $session->get('movie'),
             "avatar" => $avatar,
-            "user" => $array_u
+            "user" => $array_u,
+            "message" => $message
         ]);
     }
 

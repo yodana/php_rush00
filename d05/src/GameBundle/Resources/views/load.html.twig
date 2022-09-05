@@ -3,8 +3,12 @@
     <head>
     </head>
     <body>
+        {{message}}
         {% for f in files%}
             <a href="/load/{{f}}"> {{f}} </a>
         {% endfor %}
+        {% if map == true %}
+            <a href="/game/nomove/"><button>GAME ON</button></a>
+        {% endif %}
     </body>
 </html>

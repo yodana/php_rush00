@@ -20,7 +20,10 @@
             </table>
         </div>
         <div style="padding-left:10%;">
-            <a href="/fight/random/"><button> Fight</button></a>
+            {{message}}
+            {% if movie.health > 0 %}
+                <a href="/fight/random/"><button> Fight</button></a>
+            {% endif %}
             <a href="/game/nomove/"><button> Back to the map </button></a>
         </div>
         <div style="padding-left:10%;">

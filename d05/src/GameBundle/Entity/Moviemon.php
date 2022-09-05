@@ -77,7 +77,13 @@ class Moviemon
      * @ORM\Column(name="power", type="integer")
      */
     private $power;
-
+   
+    /**
+     * @var boolean
+     *
+     * @ORM\Column(name="captured", type="boolean")
+     */
+    private $captured;
 
     /**
      * Get id
@@ -87,6 +93,29 @@ class Moviemon
     public function getId()
     {
         return $this->id;
+    }
+
+     /**
+     * Get captured
+     *
+     * @return boolean
+     */
+    public function getCaptured()
+    {
+        return $this->captured;
+    }
+
+    /**
+     * Set captured
+     *
+     * @param boolean $captured
+     *
+     * @return Moviemon
+     */
+    public function setCaptured($captured)
+    {
+        $this->captured = $captured;
+        return $this->captured;
     }
 
     /**
