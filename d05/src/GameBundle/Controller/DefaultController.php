@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 class DefaultController extends Controller
 {
     const apikey = '3be1283c';
-    
+    public $movie = [];
     public function getMap($u_x, $u_y){
         $map = [];
         $x = 0;
@@ -236,7 +236,7 @@ class DefaultController extends Controller
             $array = json_decode($json, true);
             $array_m = $array["movies"];
             $array_u = $array["user"];
-            $message = $this->newUser($array_u[0]["username"], $array_u[0]["health"], $array_u[0]["power"]);
+            $message = $this->newUser($array_u[0]["username"], $array_u[0]["health"], $array_u[0]["power"], 2, 2);
             foreach($array_m as $movie)
                 $this->newMovie($movie["title"], $movie["rating"], $movie["year"], $movie["plot"],
                 $movie["genre"],$movie["actors"]);
@@ -299,9 +299,10 @@ class DefaultController extends Controller
     }
        
     /**
-     * @Route("/fight/")
+     * @Route("/fight/{event}/")
      */
-    public function fight(){
+    public function fight($event){
+        $session = $this->get('session');
         $entityManager = $this->getDoctrine()->getManager();
         $qb = $entityManager->createQueryBuilder();
         $rand = rand(0,9);
@@ -317,28 +318,41 @@ class DefaultController extends Controller
         ->getQuery()
         ->execute();
         $i = 0;
-        foreach($moviemon as $m){
-            if ($i == $rand){
-                $movie = $m;
-                $array_m = ['title' => $m->getTitle(),
-                'health' => $m->getHealth(),
-                'power' => $m->getPower(),
-                ];
+        if ($event == "new"){
+            foreach($moviemon as $m){
+                if ($i == $rand){
+                    $session->set('movie', ['title' => $m->getTitle(),
+                    'health' => $m->getHealth(),
+                    'power' => $m->getPower(),
+                    ]);
+                }
+                $i++;
             }
-            $i++;
         }
+        $movie = $session->get('movie');
         foreach($users as $user)
             $array_u = ['username' => $user->getUsername(),
             'health' => $user->getHealth(),
             'power' => $user->getPower(),
             ];
-        $poster = '<img src="/posters/' . str_replace(" ", "", $movie->getTitle()) . '.png" width="400px" height="600px">';
+        if ($event == "random"){
+            // Si le meme power alors 50% de chance de reussir
+            if($movie["power"] == $user->getPower()){
+                $rand = rand($movie["power"], $user->getPower() * 2);
+                if ($rand % 2)
+                    echo "USER WIN";
+                else
+                    echo "MONSTER ATTACK";   
+            }
+        }
+        $poster = '<img src="/posters/' . str_replace(" ", "", $movie["title"]) . '.png" width="400px" height="600px">';
         $avatar = '<img src="/eddy.png" width="400px" height="400px">';
         return $this->render('GameBundle::fight.html.twig', [
             "poster" => $poster,
-            "movie" => $array_m,
+            "movie" => $session->get('movie'),
             "avatar" => $avatar,
             "user" => $array_u
         ]);
     }
+
 }
