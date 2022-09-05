@@ -53,7 +53,7 @@ class DefaultController extends Controller
         }
         return $message;
     }
-    public function newMovie($title, $rating, $year, $plot, $genre, $actors){
+    public function newMovie($title, $rating, $year, $plot, $genre, $actors, $captured){
         $entityManager = $this->getDoctrine()->getManager();
         $movie = new Moviemon();
         $movie->setTitle($title);
@@ -63,7 +63,7 @@ class DefaultController extends Controller
         $movie->setGenre($genre);
         $movie->setActors($actors);
         $movie->setHealth(10);
-        $movie->setCaptured(false);
+        $movie->setCaptured($captured);
         if ($rating == "N/A" || $rating < 5)
             $movie->setPower(1);
         else if ($rating >= 5 && $rating <= 7)
@@ -127,7 +127,7 @@ class DefaultController extends Controller
                     'https://www.omdbapi.com/?i=' . $id_movies[$i] . '&apikey=' . $this::apikey
                 )->toArray();
             $this->newMovie($response["Title"],$response["imdbRating"],
-            $response["Year"],$response["Plot"], $response["Genre"], $response["Actors"]);
+            $response["Year"],$response["Plot"], $response["Genre"], $response["Actors"], 0);
             $i++;
         }
         $form = $this->createFormBuilder()
@@ -169,6 +169,7 @@ class DefaultController extends Controller
                 'plot' => $m->getPlot(),
                 'genre' => $m->getGenre(),
                 'actors' => $m->getActors(),
+                'captured' => $m->getCaptured()
             ]);
         }
         $array_u = [];
@@ -250,7 +251,7 @@ class DefaultController extends Controller
             $message = $this->newUser($array_u[0]["username"], $array_u[0]["health"], $array_u[0]["power"], $array_u[0]["x"], $array_u[0]["y"]);
             foreach($array_m as $movie)
                 $this->newMovie($movie["title"], $movie["rating"], $movie["year"], $movie["plot"],
-                $movie["genre"],$movie["actors"]);
+                $movie["genre"],$movie["actors"], $movie["captured"]);
         }
         return $this->render('GameBundle::load.html.twig', [
             "message" => "User loaded",
@@ -310,7 +311,12 @@ class DefaultController extends Controller
                 echo $e->getMessage();
             }
         }
-        var_dump($u->getX(), $u->getY());
+        if (!$user){
+            return $this->render('GameBundle:Default:index.html.twig', [
+                "message" => "Pas de joueur",
+                "cancel" => false
+            ]);
+        }
         return $this->render('GameBundle::game.html.twig', [
             "message" => "",
             "fight" => true,
@@ -326,12 +332,30 @@ class DefaultController extends Controller
         $session = $this->get('session');
         $entityManager = $this->getDoctrine()->getManager();
         $qb = $entityManager->createQueryBuilder();
-        $rand = rand(0,9);
+        $moviemon = $qb->select('u')
+        ->from(Moviemon::class, 'u')
+        ->where('u.captured = 0')
+        ->getQuery()
+        ->execute();
+        $i = 0;
+        foreach($moviemon as $m){
+            $i++;
+        }
+        var_dump($i);
+        $rand = rand(0, $i);
+        $entityManager = $this->getDoctrine()->getManager();
+        $qb = $entityManager->createQueryBuilder();
         $moviemon = $qb
         ->select('u')
         ->from(Moviemon::class, 'u')
         ->getQuery()
         ->execute();
+        if(!$moviemon){
+            return $this->render('GameBundle:Default:index.html.twig', [
+                "message" => "Pas de joueur!",
+                "cancel" => false
+            ]);
+        }
         $qb = $entityManager->createQueryBuilder();
         $users = $qb
         ->select('a')
@@ -376,13 +400,16 @@ class DefaultController extends Controller
                     $m = $entityManager->getRepository(Moviemon::class)->find($session->get('movie')["id"]);
                     $m->setHealth($session->get('movie')["health"]);
                     $m->setCaptured(true);
+                    $user->setPower($user->getPower() + 10);
                     $entityManager->persist($m);
+                    $entityManager->persist($user);
                     $entityManager->flush();
                     $message = "CONGRATS YOU CAPTURED THIS MOVIE";
                 }
             }
             else{
                 var_dump($user->getHealth());
+                $array_u["health"] -= 1;
                 $message = "MONSTER ATTACK YOU! YOU LOSE 1 HP!";
                 if ($user->getHealth() - 1 <= 0){
                     $qb = $entityManager->createQueryBuilder();
