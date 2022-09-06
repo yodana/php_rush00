@@ -1,0 +1,12 @@
+<table style="border: 1px solid black;">
+    <tr>
+        <th style="border: 1px solid black;" width="100px" height="100px">Title</td>
+        <th style="border: 1px solid black;" width="100px" height="100px">Captured</td>
+    </tr>
+    {% for m in movies %}
+    <tr>
+        <td style="border: 1px solid black;" width="100px" height="100px">{{m.title | raw}}</td>
+        <td style="border: 1px solid black;" width="100px" height="100px">{{m.captured | raw}}</td>
+    </tr>
+    {% endfor %}
+</table>

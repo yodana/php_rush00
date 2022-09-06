@@ -17,6 +17,30 @@ class DefaultController extends Controller
 {
     const apikey = '3be1283c';
     public $movie = [];
+    
+    public function getMovies(){
+        $entityManager = $this->getDoctrine()->getManager();
+        $qb = $entityManager->createQueryBuilder();
+        $movie = $qb
+        ->select('u')
+        ->from('GameBundle:Moviemon', 'u')
+        ->getQuery()
+        ->getResult();
+        $array_m = [];
+        foreach($movie as $m){
+            array_push($array_m, [
+                'title' => $m->getTitle(),
+                'rating' => $m->getRating(),
+                'year' => $m->getYear(),
+                'plot' => $m->getPlot(),
+                'genre' => $m->getGenre(),
+                'actors' => $m->getActors(),
+                'captured' => $m->getCaptured() == true ? "&#10004;": "&#10060;",
+            ]);
+        }
+        return $array_m;
+    }
+
     public function getMap($u_x, $u_y){
         $map = [];
         $x = 0;
@@ -140,7 +164,8 @@ class DefaultController extends Controller
             return $this->render('GameBundle::game.html.twig', [
                 "message" => $message,
                 "fight" => false,
-                "map" => $this->getMap(2, 2)
+                "map" => $this->getMap(2, 2),
+                "movies" => $this->getMovies()
             ]);
         }
         return $this->render('GameBundle::new.html.twig', [
@@ -320,7 +345,8 @@ class DefaultController extends Controller
         return $this->render('GameBundle::game.html.twig', [
             "message" => "",
             "fight" => true,
-            "map" => $this->getMap($u->getX(), $u->getY())
+            "map" => $this->getMap($u->getX(), $u->getY()),
+            "movies" => $this->getMovies()
         ]);
     }
        
@@ -343,13 +369,6 @@ class DefaultController extends Controller
         }
         var_dump($i);
         $rand = rand(0, $i);
-        $entityManager = $this->getDoctrine()->getManager();
-        $qb = $entityManager->createQueryBuilder();
-        $moviemon = $qb
-        ->select('u')
-        ->from(Moviemon::class, 'u')
-        ->getQuery()
-        ->execute();
         if(!$moviemon){
             return $this->render('GameBundle:Default:index.html.twig', [
                 "message" => "Pas de joueur!",
