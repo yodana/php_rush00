@@ -18,6 +18,18 @@ class DefaultController extends Controller
     const apikey = '3be1283c';
     public $movie = [];
     
+    public function verif(){
+        $entityManager = $this->getDoctrine()->getManager();
+        $m = $entityManager->getRepository(Moviemon::class)->findAll();
+        $c = 0;
+        foreach($m as $movie){
+            if ($movie->getCaptured() == 1){
+                $c += 1;
+            }
+        }
+        return $c;
+    }
+
     public function getMovies(){
         $entityManager = $this->getDoctrine()->getManager();
         $qb = $entityManager->createQueryBuilder();
@@ -272,7 +284,6 @@ class DefaultController extends Controller
             $array = json_decode($json, true);
             $array_m = $array["movies"];
             $array_u = $array["user"];
-            var_dump($array_u[0]["x"],$array_u[0]["y"]);
             $message = $this->newUser($array_u[0]["username"], $array_u[0]["health"], $array_u[0]["power"], $array_u[0]["x"], $array_u[0]["y"]);
             foreach($array_m as $movie)
                 $this->newMovie($movie["title"], $movie["rating"], $movie["year"], $movie["plot"],
@@ -290,18 +301,22 @@ class DefaultController extends Controller
      * @Route("/game/{move}/")
      */
     public function game($move){
+        if($this->verif() == 10){
+            return $this->render('GameBundle::win.html.twig', [
+                "message" => "Congrats you win."
+            ]);
+        }
         $entityManager = $this->getDoctrine()->getManager();
         $qb = $entityManager->createQueryBuilder();
         $array_u = [];
-        $positon = [];
         $user = $qb
         ->select('a')
         ->from(User::class, 'a')
         ->getQuery()
         ->execute();
-        $x = 0;
-        $y = 0;
-        $map = [];
+        $user[0]->setHealth(10);
+        $entityManager->persist($user[0]);
+        $entityManager->flush();
         foreach($user as $u){
             array_push($array_u, [
                 'username' => $u->getUsername(),
@@ -309,21 +324,16 @@ class DefaultController extends Controller
                 'power' => $u->getPower(),
             ]);
             $name = $u->getUsername();
-            $u->getHealth(10);
             if ($move == "left"){
-                var_dump("LEFT");
                 $u->setY((5 + (($u->getY() - 1) % 5)) % 5);
             }
             else if ($move == "right"){
-                var_dump("RIGHT");
                 $u->setY((5 + (($u->getY() + 1) % 5)) % 5);
             }
             else if ($move == "down"){
-                var_dump("DOWN");
                 $u->setX((5 + (($u->getX() + 1) % 5)) % 5);
             }
             else if ($move == "up"){
-                var_dump("UP");
                 $u->setX((5 + (($u->getX() - 1) % 5)) % 5);
             }
             try{
@@ -367,7 +377,6 @@ class DefaultController extends Controller
         foreach($moviemon as $m){
             $i++;
         }
-        var_dump($i);
         $rand = rand(0, $i);
         if(!$moviemon){
             return $this->render('GameBundle:Default:index.html.twig', [
@@ -404,7 +413,6 @@ class DefaultController extends Controller
         if ($event == "random"){
             $rand = rand(1, 100);
             $mod = $movie["power"] / $user->getPower();
-            var_dump($mod);
             if($mod < 1)
                 $mod = 1;
             if (($rand % $mod) == 0){
@@ -416,20 +424,30 @@ class DefaultController extends Controller
                     'power' => $session->get('movie')["power"],
                     ]);
                 if($session->get('movie')["health"] <= 0){
+                    if($this->verif() == 10){
+                        return $this->render('GameBundle::win.html.twig', [
+                            "message" => "Congrats you win."
+                        ]);
+                    }
                     $m = $entityManager->getRepository(Moviemon::class)->find($session->get('movie')["id"]);
                     $m->setHealth($session->get('movie')["health"]);
                     $m->setCaptured(true);
-                    $user->setPower($user->getPower() + 10);
+                    $user->setPower($user->getPower() + (5 * $session->get('movie')["power"]));
                     $entityManager->persist($m);
                     $entityManager->persist($user);
                     $entityManager->flush();
                     $message = "CONGRATS YOU CAPTURED THIS MOVIE";
+                    return $this->render('GameBundle::game.html.twig', [
+                        "message" => $message,
+                        "fight" => false,
+                        "map" => $this->getMap($user->getX(), $user->getY()),
+                        "movies" => $this->getMovies()
+                    ]);
                 }
             }
             else{
-                var_dump($user->getHealth());
                 $array_u["health"] -= 1;
-                $message = "MONSTER ATTACK YOU! YOU LOSE 1 HP!";
+                $message = "YOU MISS! MONSTER ATTACK YOU! YOU LOSE 1 HP!";
                 if ($user->getHealth() - 1 <= 0){
                     $qb = $entityManager->createQueryBuilder();
                     $qb
@@ -464,4 +482,20 @@ class DefaultController extends Controller
         ]);
     }
 
+    /**
+     * @Route("/details/")
+     */
+    public function details(){
+
+        $movies = $this->getMovies();
+        if(!$movies){
+            return $this->render('GameBundle:Default:index.html.twig', [
+                "message" => "Pas de joueur!",
+                "cancel" => false
+            ]);
+        }
+        return $this->render('GameBundle::details.html.twig', [
+            "movies" => $movies
+        ]);
+    }
 }

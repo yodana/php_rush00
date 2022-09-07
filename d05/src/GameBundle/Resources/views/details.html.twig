@@ -1,12 +1,30 @@
-<table style="border: 1px solid black;">
-    <tr>
-        <th style="border: 1px solid black;" width="100px" height="100px">Title</td>
-        <th style="border: 1px solid black;" width="100px" height="100px">Captured</td>
-    </tr>
-    {% for m in movies %}
-    <tr>
-        <td style="border: 1px solid black;" width="100px" height="100px">{{m.title | raw}}</td>
-        <td style="border: 1px solid black;" width="100px" height="100px">{{m.captured | raw}}</td>
-    </tr>
-    {% endfor %}
-</table>
+<!DOCTYPE>
+<html>
+    <head>
+    </head>
+    <body>
+        <table style="border: 1px solid black;">
+            <tr>
+                <th style="border: 1px solid black;" width="100px" height="100px">Title</td>
+                <th style="border: 1px solid black;" width="100px" height="100px">Rating</td>
+                <th style="border: 1px solid black;" width="100px" height="100px">Year</td>
+                <th style="border: 1px solid black;" width="100px" height="100px">Plot</td>
+                <th style="border: 1px solid black;" width="100px" height="100px">Genre</td>
+                <th style="border: 1px solid black;" width="100px" height="100px">Actors</td>
+                <th style="border: 1px solid black;" width="100px" height="100px">Captured</td>
+            </tr>
+            {% for m in movies %}
+            <tr>
+                <td style="border: 1px solid black;" width="100px" height="100px">{{m.title}}</td>
+                <td style="border: 1px solid black;" width="100px" height="100px">{{m.rating}}</td>
+                <td style="border: 1px solid black;" width="100px" height="100px">{{m.year}}</td>
+                <td style="border: 1px solid black;" width="100px" height="100px">{{m.plot}}</td>
+                <td style="border: 1px solid black;" width="100px" height="100px">{{m.genre}}</td>
+                <td style="border: 1px solid black;" width="100px" height="100px">{{m.actors}}</td>
+                <td style="border: 1px solid black;" width="100px" height="100px">{{m.captured | raw}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a href="/game/nomove/"><button>Back to the game</button></a>
+    </body>
+</html>
